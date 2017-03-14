@@ -4,6 +4,7 @@
 //#include "MantidDataHandling/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/TextAxis.h"
+#include <vector>
 #include <yaml-cpp/yaml.h>
 
 
@@ -80,7 +81,7 @@ private:
     //std::map<std::string, std::string> getMetadata() {return metadata;}
     void setMetadata(std::map<std::string, std::string> nMetadata) { metadata = nMetadata;}
     void writeHeader(YAML::Emitter& em);
-    void getBinCenters(Axis *axis, std::vector<double> &result);
+    //void getCenters(API::Axis& axis, std::vector<double> &result);
     //void setRpar(std::vector<ParStruct>  nRpar) { rpar = nRpar;}
     //std::vector<ParStruct>  getRpar() {return rpar;}
     //std::vector<std::string> getHistory() { return history; }

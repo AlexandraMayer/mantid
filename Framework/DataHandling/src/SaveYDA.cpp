@@ -5,6 +5,7 @@
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
 #include <fstream>
+#include "MantidKernel/CompositeValidator.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -17,16 +18,27 @@ SaveYDA::SaveYDA() {}
 
 /// Initialisation method.
 void SaveYDA::init() {
+
+    auto wsValidator = boost::make_shared<CompositeValidator>();
+    wsValidator->add<WorkspaceUnitValidator>("DeltaE");
+    wsValidator->add<InstrumentValidator>();
+
     //declare mandatory prpperties
     declareProperty(make_unique<WorkspaceProperty<MatrixWorkspace>>(
-                        "InputWorkspace", "" , Direction::Input/*,
-                        *boost::make_shared<InstrumentValidator>(),
-                        boost::make_shared<WorkspaceUnitValidator>("DeltaE")*/) ,
+                        "InputWorkspace", "" , Direction::Input, wsValidator) ,
                     "The workspace name to use as Input");
+
+
     declareProperty(make_unique<FileProperty>("Filename", "",
                          FileProperty::Save, ""),
                     "The name to use when writing the file");
 
+}
+
+void getBinCenters(Axis *axis, std::vector<double>& result) {
+    for(size_t i = 1; i < axis->length(); i++) {
+        result.push_back((axis->getValue(i) + axis->getValue(i-1))/2);
+   }
 }
 
 void SaveYDA::exec() {
@@ -70,22 +82,39 @@ void SaveYDA::exec() {
     metadata["type"] = "generic tabular data";
     YAML::Emitter em;
 
-    ws->run().getLogData();
+    auto ld = ws->run().getLogData();
 
-    std::string writing = "propsal number: " ;
-    std::string proposal_number = std::to_string((int)(ws->run().getLogAsSingleValue("proposal_number")));
-    history.push_back(writing + proposal_number);
+    if(ld.size() == 0) {
+        g_log.error("No sample log data");
+        throw Exception::ExistsError("No sample log data exists in ", filename);
+    }
 
-    auto  proposal_title = ws->run().getLogData("proposal_title")->value();
-    history.push_back(proposal_title);
+    if(ws->run().hasProperty("proposal_number")) {
+        std::string writing = "propsal number: " ;
+        std::string proposal_number = std::to_string((int)(ws->run().getLogAsSingleValue("proposal_number")));
+        history.push_back(writing + proposal_number);
+    } else {
+        g_log.warning("no proposal number found");
+    }
 
-    auto experiment_team = ws->run().getLogData("experiment_team")->value();
-    history.push_back(experiment_team);
+    if(ws->run().hasProperty("proposal_title")) {
+        auto  proposal_title = ws->run().getLogData("proposal_title")->value();
+        history.push_back(proposal_title);
+    } else {
+        g_log.warning("no proposal title found");
+    }
+
+    if(ws->run().hasProperty("experiment_team")) {
+        auto experiment_team = ws->run().getLogData("experiment_team")->value();
+        history.push_back(experiment_team);
+    } else {
+        g_log.warning("no experiment team found");
+    }
 
     history.push_back("data reduced with mantid");
 
 
-    if(!ws->run().hasProperty("tempature")) {
+    if(!(ws->run().hasProperty("temperature"))) {
         g_log.warning("no temperature found");
     } else {
         double temperature = ws->run().getLogAsSingleValue("temperature");
@@ -100,9 +129,7 @@ void SaveYDA::exec() {
     }
 
 
-
-
-    if(!ws->run().hasProperty("Ei") ) {
+    if(!(ws->run().hasProperty("Ei")) ) {
         g_log.warning("no Ei found");
     } else {
         double ei = ws->run().getLogAsSingleValue("Ei");
@@ -120,6 +147,8 @@ void SaveYDA::exec() {
 
     Axis *X = ws->getAxis(0);
 
+    if(X != nullptr)
+       std::cout <<  "not a nullpointer" << std::endl;
     Coordinate xc;
     xc.designation = "x";
     if(X->isSpectra()) {
@@ -165,10 +194,9 @@ void SaveYDA::exec() {
 
     coord.push_back(zc);
 
-    std::vector<double> bin_centers;
+    std::vector<double> bin_centers(4,0.12);
 
     getBinCenters(ws->getAxis(1), bin_centers);
-
 
 
 
@@ -178,7 +206,7 @@ void SaveYDA::exec() {
         //std::vector<double> x;
         std::vector<double> y;
         std::vector<double> x_centers;
-        getBinCenters(ws->getAxis(0), x_centers);
+        getBinCenters(X, x_centers);
        // for(unsigned int j = 0; j < xs.size(); j++) {
         //    x.push_back(xs[j]);
        // }
@@ -196,11 +224,7 @@ void SaveYDA::exec() {
 
 }
 
-void getBinCenters(Axis *axis, std::vector<double> &result) {
-    for(int i = 1; i < axis->length(); i++) {
-        result.push_back((axis->getValue(i) + axis->getValue(i-1))/2);
-    }
-}
+
 
 YAML::Emitter& operator << (YAML::Emitter& em,const Coordinate c) {
     em << YAML::BeginMap << YAML::Key << c.designation << YAML::Flow << YAML::BeginMap
@@ -225,6 +249,7 @@ YAML::Emitter& operator << (YAML::Emitter& em,const Spectrum s) {
        << YAML::Key << "x" << YAML::Value << YAML::Flow << s.x
        << YAML::Key << "y" << YAML::Value << YAML::Flow << s.y
        << YAML::EndMap;
+    return em;
 }
 
 void SaveYDA::writeHeader(YAML::Emitter& em) {

@@ -17,6 +17,7 @@ if ( CXXTEST_FOUND )
             ${GMOCK_LIBRARIES}
             ${GTEST_LIBRARIES}
             ${JSONCPP_LIBRARIES}
+            ${YAMLCPP_LIBRARIES}
             ${TBB_LIBRARIES}
             ${TBB_MALLOC_LIBRARIES}
 )

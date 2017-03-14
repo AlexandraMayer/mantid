@@ -500,7 +500,7 @@ set ( TEST_FILES
 	SaveSavuTomoConfigTest.h
 	SaveTBLTest.h
 	SaveToSNSHistogramNexusTest.h
-#	SaveYDATest.h
+        SaveYDATest.h
 	SetBeamTest.h
 	SetSampleMaterialTest.h
 	SetSampleTest.h
