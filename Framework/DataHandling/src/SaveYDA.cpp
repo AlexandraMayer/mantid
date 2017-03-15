@@ -35,7 +35,7 @@ void SaveYDA::init() {
 
 }
 
-void getBinCenters(Axis *axis, std::vector<double>& result) {
+void SaveYDA::getBinCenters(Axis *axis, std::vector<double>& result) {
     for(size_t i = 1; i < axis->length(); i++) {
         result.push_back((axis->getValue(i) + axis->getValue(i-1))/2);
    }
@@ -90,7 +90,7 @@ void SaveYDA::exec() {
     }
 
     if(ws->run().hasProperty("proposal_number")) {
-        std::string writing = "propsal number: " ;
+        std::string writing = "proposal number: " ;
         std::string proposal_number = std::to_string((int)(ws->run().getLogAsSingleValue("proposal_number")));
         history.push_back(writing + proposal_number);
     } else {
@@ -162,7 +162,8 @@ void SaveYDA::exec() {
             xc.unit = X->unit()->unitID();
         }
         if(xc.unit == "DeltaE")
-            xc.unit = "w";
+            xc.name = "w";
+            xc.unit = "meV";
     }
 
     coord.push_back(xc);
@@ -189,12 +190,13 @@ void SaveYDA::exec() {
             zc.unit = Z->unit()->unitID();
          }
         if(zc.unit == "DeltaE")
-            zc.unit = "w";
+            zc.name = "w";
+            zc.unit = "meV";
     }
 
     coord.push_back(zc);
 
-    std::vector<double> bin_centers(4,0.12);
+    std::vector<double> bin_centers;
 
     getBinCenters(ws->getAxis(1), bin_centers);
 
@@ -256,8 +258,8 @@ void SaveYDA::writeHeader(YAML::Emitter& em) {
     em << YAML::BeginMap << YAML::Key << "Meta";
     em << YAML::Value << metadata;
     em << YAML::Key << "History" << YAML::Value << history;
-    em << YAML::Key << "RPar" <<  rpar ;
     em << YAML::Key << "Coord" << coord;
+    em << YAML::Key << "RPar" <<  rpar ;
     em << YAML::Key << "Slices" << slices <<YAML::EndMap;
 }
 

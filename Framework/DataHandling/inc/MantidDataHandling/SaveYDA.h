@@ -74,14 +74,14 @@ public:
     const::std::string name () const override { return "SaveYDA"; }
     int version() const override { return 1; }
     const std::string summary() const override { return "Saves a 2D workspace to a FRIDA yaml file."; }
-
+    void getBinCenters(Axis* axis, std::vector<double> &result);
 private:
     void init() override;
     virtual void exec() override;
     //std::map<std::string, std::string> getMetadata() {return metadata;}
     void setMetadata(std::map<std::string, std::string> nMetadata) { metadata = nMetadata;}
     void writeHeader(YAML::Emitter& em);
-    //void getCenters(API::Axis& axis, std::vector<double> &result);
+
     //void setRpar(std::vector<ParStruct>  nRpar) { rpar = nRpar;}
     //std::vector<ParStruct>  getRpar() {return rpar;}
     //std::vector<std::string> getHistory() { return history; }

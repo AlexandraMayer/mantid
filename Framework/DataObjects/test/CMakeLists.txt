@@ -25,7 +25,6 @@ if ( CXXTEST_FOUND )
             Kernel
             ${NEXUS_LIBRARIES}
             ${JSONCPP_LIBRARIES}
-            ${YAMLCPP_LIBRARIES}
             ${Boost_LIBRARIES}
             ${POCO_LIBRARIES}
             ${GMOCK_LIBRARIES}

@@ -97,7 +97,7 @@ set_property ( TARGET ICat PROPERTY FOLDER "MantidFramework" )
 
 include_directories ( inc )
 
-target_link_libraries ( ICat LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS} ${OPENSSL_LIBRARIES} ${YAMLCPP_LIBRARIES} ${JSONCPP_LIBRARIES})
+target_link_libraries ( ICat LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS} ${OPENSSL_LIBRARIES} ${JSONCPP_LIBRARIES})
 
 # Add the unit tests directory
 add_subdirectory ( test )
