@@ -6,6 +6,7 @@
 #include "MantidAPI/InstrumentValidator.h"
 #include <fstream>
 #include "MantidKernel/CompositeValidator.h"
+#include "MantidAPI/SpectrumInfo.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -39,6 +40,18 @@ void SaveYDA::getBinCenters(Axis *axis, std::vector<double>& result) {
     for(size_t i = 1; i < axis->length(); i++) {
         result.push_back((axis->getValue(i) + axis->getValue(i-1))/2);
    }
+}
+
+std::map<std::string, std::string> SaveYDA::validateInputs() {
+
+    std::map<std::string, std::string> issues;
+
+    const MatrixWorkspace_sptr inws = getProperty("InputWorkspace");
+
+    if((inws->getAxis(1)->unit()->caption() != "q") || (!(inws->getAxis(1)->isSpectra()))) {
+        issues["InputWorkspace"] = "Y axis is not 'Spectrum Axis' or 'Momentum Transfer'";
+    }
+    return issues;
 }
 
 void SaveYDA::exec() {
@@ -90,7 +103,7 @@ void SaveYDA::exec() {
     }
 
     if(ws->run().hasProperty("proposal_number")) {
-        std::string writing = "proposal number: " ;
+        std::string writing = "Proposal number " ;
         std::string proposal_number = std::to_string((int)(ws->run().getLogAsSingleValue("proposal_number")));
         history.push_back(writing + proposal_number);
     } else {
@@ -195,12 +208,21 @@ void SaveYDA::exec() {
     }
 
     coord.push_back(zc);
-
     std::vector<double> bin_centers;
 
-    getBinCenters(ws->getAxis(1), bin_centers);
-
-
+    if(Z->isSpectra()) {
+        const size_t nHist = ws->getNumberHistograms();
+        const auto &spectrumInfo = ws->spectrumInfo();
+        for(size_t i = 0; i < nHist; i++) {
+            if(!spectrumInfo.isMonitor(i)) {
+                double twoTheta = spectrumInfo.twoTheta(i);
+                twoTheta = (180*twoTheta)/M_PI;
+                bin_centers.push_back(twoTheta);
+            }
+        }
+    } else {
+        getBinCenters(ws->getAxis(1), bin_centers);
+    }
 
     for(unsigned int i = 0; i < Z->length()-1; i++) {
         auto xs = ws->x(i);
@@ -229,9 +251,9 @@ void SaveYDA::exec() {
 
 
 YAML::Emitter& operator << (YAML::Emitter& em,const Coordinate c) {
-    em << YAML::BeginMap << YAML::Key << c.designation << YAML::Flow << YAML::BeginMap
+    em/* << YAML::BeginMap*/ << YAML::Key << c.designation << YAML::Value << YAML::Flow << YAML::BeginMap
        << YAML::Key << "name" << YAML::Value << c.name << YAML::Key << "unit"
-       << YAML::Value << c.unit << YAML::EndMap << YAML::EndMap;
+       << YAML::Value << c.unit << YAML::EndMap /*<< YAML::EndMap*/;
     return em;
 }
 
@@ -258,7 +280,7 @@ void SaveYDA::writeHeader(YAML::Emitter& em) {
     em << YAML::BeginMap << YAML::Key << "Meta";
     em << YAML::Value << metadata;
     em << YAML::Key << "History" << YAML::Value << history;
-    em << YAML::Key << "Coord" << coord;
+    em << YAML::Key <<  "Coord" << YAML::BeginMap << coord.at(0) << coord.at(1) << coord.at(2) << YAML::EndMap;
     em << YAML::Key << "RPar" <<  rpar ;
     em << YAML::Key << "Slices" << slices <<YAML::EndMap;
 }

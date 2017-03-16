@@ -1,7 +1,6 @@
 #ifndef MANTID_DATAHANDLING_SAVEYDA_H_
 #define MANTID_DATAHANDLING_SAVEYDA_H_
 
-//#include "MantidDataHandling/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/TextAxis.h"
 #include <vector>
@@ -35,19 +34,22 @@ namespace DataHandling {
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 
+// structure for parameters of the workspace
 struct ParStruct {
-    std::string name;
-    std::string unit;
-    double value;
-    double stdv;
+    std::string name; //name of the parameter
+    std::string unit; //unit of the parameter
+    double value; //value of the paramter
+    double stdv; //standard devision of the parameter
 };
 
+// structure for the coordinates of the workspace
 struct Coordinate {
-    std::string name;
-    std::string unit;
-    std::string designation;
+    std::string name; //name of the coordinate
+    std::string unit; //unit of the coordinate
+    std::string designation; //designation of the coordinate
 };
 
+// structure for the slices of the workspace
 struct Spectrum {
     int j;
     double z;
@@ -67,18 +69,19 @@ using namespace API;
 class DLLExport SaveYDA : public API::Algorithm {
 public:
 
-
-
     SaveYDA();
 
     const::std::string name () const override { return "SaveYDA"; }
     int version() const override { return 1; }
     const std::string summary() const override { return "Saves a 2D workspace to a FRIDA yaml file."; }
     void getBinCenters(Axis* axis, std::vector<double> &result);
+
 private:
+
     void init() override;
     virtual void exec() override;
     //std::map<std::string, std::string> getMetadata() {return metadata;}
+    std::map<std::string, std::string> validateInputs() override;
     void setMetadata(std::map<std::string, std::string> nMetadata) { metadata = nMetadata;}
     void writeHeader(YAML::Emitter& em);
 
