@@ -4,14 +4,17 @@
 #include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
-#include <fstream>
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidAPI/SpectrumInfo.h"
 
+#include <fstream>
+
 namespace Mantid {
 namespace DataHandling {
+
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(SaveYDA)
+
 using namespace API;
 using namespace Kernel;
 
@@ -25,10 +28,9 @@ void SaveYDA::init() {
     wsValidator->add<InstrumentValidator>();
 
     //declare mandatory prpperties
-    declareProperty(make_unique<WorkspaceProperty<MatrixWorkspace>>(
+    declareProperty(make_unique<WorkspaceProperty<DataObjects::Workspace2D>>(
                         "InputWorkspace", "" , Direction::Input, wsValidator) ,
                     "The workspace name to use as Input");
-
 
     declareProperty(make_unique<FileProperty>("Filename", "",
                          FileProperty::Save, ""),
@@ -37,20 +39,25 @@ void SaveYDA::init() {
 }
 
 void SaveYDA::getBinCenters(Axis *axis, std::vector<double>& result) {
-    for(size_t i = 1; i < axis->length(); i++) {
+
+    for(size_t i = 1; i < axis->length(); i++)
         result.push_back((axis->getValue(i) + axis->getValue(i-1))/2);
-   }
+
 }
 
 std::map<std::string, std::string> SaveYDA::validateInputs() {
 
     std::map<std::string, std::string> issues;
+/*
+    MatrixWorkspace_const_sptr*/ DataObjects::Workspace2D_sptr inws = getProperty("InputWorkspace");
 
-    const MatrixWorkspace_sptr inws = getProperty("InputWorkspace");
+    if(!inws)
+        return issues;
 
-    if((inws->getAxis(1)->unit()->caption() != "q") || (!(inws->getAxis(1)->isSpectra()))) {
+    if((inws->getAxis(1)->unit()->caption() != "q") && (!(inws->getAxis(1)->isSpectra()))) {
         issues["InputWorkspace"] = "Y axis is not 'Spectrum Axis' or 'Momentum Transfer'";
     }
+
     return issues;
 }
 
@@ -59,29 +66,9 @@ void SaveYDA::exec() {
     const std::string filename = getProperty("Filename");
     g_log.debug() << "SaveYDA filename = " << filename << std::endl;
 
-    const MatrixWorkspace_sptr ws = getProperty("InputWorkspace");
+    /*MatrixWorkspace_const_sptr*/ DataObjects::Workspace2D_sptr ws =getProperty("InputWorkspace");
+    g_log.debug() << "workspace: " << ws;
 
-    /*
-    g_log.debug() << "Workspace =" << ws->getName() << std::endl;
-    auto &yValue = ws->y(0);
-    g_log.debug() << "Y-Val at 0 = " << yValue[0] << std::endl;
-    auto &xValue = ws->x(0);
-    g_log.debug() << "X-Val at 0 = " << xValue[0] << std::endl;
-    g_log.debug() << "T = " << temperature << std::endl;
-    g_log.debug() << "Ei = " << ei << std::endl;
-    g_log.debug() << "proposal_number = " << proposal_numberd << std::endl;
-    g_log.debug() << "experiment_team = " << (experiment_team) << std::endl;
-    g_log.debug() << "proposal_title = " << proposal_title << std::endl;
-    std::string x_unit = X->unit()->unitID();
-    g_log.debug() << " x title " << X->unit()->caption()<< " x unit "  << x_unit  <<  std::endl;
-    std::string y_unit = Z->unit()->unitID();
-    g_log.debug() << "y title" << Z->unit()->caption() << " y unit " <<y_unit << std::endl;
-    g_log.debug() << "length: " << Z->length() << std::endl;
-    for(int i= 0; i < Z->length()-1; i++) {
-        g_log.debug() << "j: " <<  i << "\n z: " << (ws->getAxis(1)->getValue(i)) << "x: " << ws->x(i)[0] << "y: " << ws->y(i)[0] << std::endl;
-    }
-
-*/
     //open file for writing
     std::ofstream fout(filename.c_str());
 
@@ -89,6 +76,8 @@ void SaveYDA::exec() {
         g_log.error("Failed to open file: " + filename);
         throw Exception::FileError("Failed to open file ", filename);
     }
+
+    const size_t nHist = ws->getNumberHistograms();
 
     //initializing metadata
     metadata["format"] = "yaml/frida 2.0";
@@ -99,7 +88,7 @@ void SaveYDA::exec() {
 
     if(ld.size() == 0) {
         g_log.error("No sample log data");
-        throw Exception::ExistsError("No sample log data exists in ", filename);
+        throw Exception::ExistsError("No sample log data exists in workspace", ws->getName());
     }
 
     if(ws->run().hasProperty("proposal_number")) {
@@ -127,6 +116,7 @@ void SaveYDA::exec() {
     history.push_back("data reduced with mantid");
 
 
+
     if(!(ws->run().hasProperty("temperature"))) {
         g_log.warning("no temperature found");
     } else {
@@ -140,7 +130,6 @@ void SaveYDA::exec() {
 
         rpar.push_back(temppar);
     }
-
 
     if(!(ws->run().hasProperty("Ei")) ) {
         g_log.warning("no Ei found");
@@ -160,10 +149,10 @@ void SaveYDA::exec() {
 
     Axis *X = ws->getAxis(0);
 
-    if(X != nullptr)
-       std::cout <<  "not a nullpointer" << std::endl;
+    //if(X != nullptr)
     Coordinate xc;
     xc.designation = "x";
+    /*
     if(X->isSpectra()) {
         xc.name = "2th";
         xc.unit = "deg";
@@ -175,9 +164,10 @@ void SaveYDA::exec() {
             xc.unit = X->unit()->unitID();
         }
         if(xc.unit == "DeltaE")
-            xc.name = "w";
-            xc.unit = "meV";
-    }
+        */
+    xc.name = "w";
+    xc.unit = "meV";
+    //}
 
     coord.push_back(xc);
 
@@ -201,49 +191,63 @@ void SaveYDA::exec() {
             zc.unit= "A-1";
         } else {
             zc.unit = Z->unit()->unitID();
-         }
+        }
+        /*
         if(zc.unit == "DeltaE")
             zc.name = "w";
             zc.unit = "meV";
+            */
     }
 
     coord.push_back(zc);
-    std::vector<double> bin_centers;
+
+
+
+    std::vector<double> z;//bin_centers;
 
     if(Z->isSpectra()) {
-        const size_t nHist = ws->getNumberHistograms();
+
         const auto &spectrumInfo = ws->spectrumInfo();
         for(size_t i = 0; i < nHist; i++) {
             if(!spectrumInfo.isMonitor(i)) {
                 double twoTheta = spectrumInfo.twoTheta(i);
                 twoTheta = (180*twoTheta)/M_PI;
-                bin_centers.push_back(twoTheta);
+                /*bin_centers*/z.push_back(twoTheta);
             }
         }
+    } else if(Z->length() == nHist) {
+
+        for(size_t i = 0; i < ws->getAxis(1)->length(); i++)
+            /*bin_centers*/z.push_back(ws->getAxis(1)->getValue(i));
+
     } else {
-        getBinCenters(ws->getAxis(1), bin_centers);
+
+        getBinCenters(ws->getAxis(1), /*bin_centers*/z);
+
     }
 
-    for(unsigned int i = 0; i < Z->length()-1; i++) {
-        auto xs = ws->x(i);
+    for(size_t i = 0; i < nHist; i++) {
+
         auto ys = ws->y(i);
-        //std::vector<double> x;
+
         std::vector<double> y;
         std::vector<double> x_centers;
+
         getBinCenters(X, x_centers);
-       // for(unsigned int j = 0; j < xs.size(); j++) {
-        //    x.push_back(xs[j]);
-       // }
+
         for(unsigned int k = 0; k < ys.size(); k++) {
             y.push_back(ys[k]);
         }
-        slices.push_back(Spectrum(i,bin_centers[i],x_centers,y));
+
+        slices.push_back(Spectrum((int)i,/*bin_centers*/z[i],x_centers,y));
     }
+
 
 
     writeHeader(em);
     fout << em.c_str();
     fout.close();
+
 
 
 }
@@ -257,6 +261,7 @@ YAML::Emitter& operator << (YAML::Emitter& em,const Coordinate c) {
     return em;
 }
 
+
 YAML::Emitter& operator << (YAML::Emitter& em,const ParStruct p) {
     em << YAML::BeginMap << YAML::Key << "name" << YAML::Value << p.name
         << YAML::Key << "unit" << YAML::Key << p.unit << YAML::Key << "val"
@@ -264,6 +269,7 @@ YAML::Emitter& operator << (YAML::Emitter& em,const ParStruct p) {
         << YAML::EndMap;
     return em;
 }
+
 
 YAML::Emitter& operator << (YAML::Emitter& em,const Spectrum s) {
     em << YAML::BeginMap << YAML::Key << "j" << YAML::Value << s.j
@@ -275,6 +281,7 @@ YAML::Emitter& operator << (YAML::Emitter& em,const Spectrum s) {
        << YAML::EndMap;
     return em;
 }
+
 
 void SaveYDA::writeHeader(YAML::Emitter& em) {
     em << YAML::BeginMap << YAML::Key << "Meta";

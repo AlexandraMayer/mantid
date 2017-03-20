@@ -3,6 +3,7 @@
 
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/TextAxis.h"
+
 #include <vector>
 #include <yaml-cpp/yaml.h>
 
@@ -80,14 +81,10 @@ private:
 
     void init() override;
     virtual void exec() override;
-    //std::map<std::string, std::string> getMetadata() {return metadata;}
     std::map<std::string, std::string> validateInputs() override;
     void setMetadata(std::map<std::string, std::string> nMetadata) { metadata = nMetadata;}
     void writeHeader(YAML::Emitter& em);
 
-    //void setRpar(std::vector<ParStruct>  nRpar) { rpar = nRpar;}
-    //std::vector<ParStruct>  getRpar() {return rpar;}
-    //std::vector<std::string> getHistory() { return history; }
 
     std::map<std::string, std::string> metadata;
     std::vector<ParStruct> rpar;
