@@ -14,6 +14,11 @@
 #include "MantidDataHandling/LoadInstrument.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidAPI/SpectrumInfo.h"
+#include "MantidHistogramData/LinearGenerator.h"
+
+
+#include "MantidAPI/DetectorInfo.h"
+
 
 
 
@@ -287,7 +292,8 @@ public:
     void setUp() override {
 
         std::cout << "\nin setup" << std::endl;
-        /*Workspace2D_sptr*/ ws = WorkspaceCreationHelper::create2DWorkspaceBinned(nHistPerformance,1000,2.0,0.01);
+        ///*Workspace2D_sptr*/ ws = WorkspaceCreationHelper::create2DWorkspaceBinned(nHistPerformance,1000,2.0,0.01);
+        ws = WorkspaceCreationHelper::create2DWorkspaceWithFullInstrument(nHistPerformance,1000);
         std::cout << "did make ws2D " << ws << " id? " << ws->id() << std::endl;
         std::cout << "Number of Histogramms " << ws->getNumberHistograms() << std::endl;
         //std::cout << "Problem with AnalysisDataService?" << std::endl;
@@ -306,29 +312,58 @@ public:
         loader.setPropertyValue("Filename", "INES_Definition.xml");
         TS_ASSERT_THROWS_NOTHING(loader.execute());
 */
+        /*
+        std::cout << "Bin edges? " << std::endl;
+        Mantid::HistogramData::BinEdges xs(990,Mantid::HistogramData::LinearGenerator(10.0,1.0));
+        std::cout << "no" << std::endl;
+        std::cout << "xs";
+        for(auto x : xs)
+            std::cout << x << std::endl;
+        std::cout << "Count Standard deviations? " << std::endl;
+        Mantid::HistogramData::CountStandardDeviations errors(998,0.1);
+        std::cout << "no" << std::endl;
+        std::cout << "error";
+        for(auto err : errors)
+            std::cout << err << std::endl;
         for (int j=0; j < nHistPerformance; ++j) {
+            std::cout << "setBinEdges?" << std::endl;
+            ws->setBinEdges(j,xs);
+            std::cout << "no" << std::endl;
+            std::cout << "setCounts? " << std::endl;
+            ws->setCounts(j,998,j+1);
+            std::cout << "no" << std::endl;
+            ws->setCountStandardDeviations(j,errors);
             ws->getSpectrum(j).setDetectorID(j);
         }
         Mantid::Geometry::Instrument_sptr instr(new Mantid::Geometry::Instrument);
         for (Mantid::detid_t i = 0; i < 1000; i++) {
           Mantid::Geometry::Detector *d = new Mantid::Geometry::Detector("det", i, 0);
           instr->markAsDetector(d);
-          d->setPos(i,i,i);
+          //d->setPos(i,i,i);
         }
 
         ws->setInstrument(instr);
         std::cout << "setInstrument works" << std::endl;
-
+*/
+/*
+        std::vector<double> dummy(ws->getNumberHistograms(),0.0);
+        auto testInst = ComponentCreationHelper::createCylInstrumentWithDetInGivenPositions(dummy,dummy,dummy);
+        ws->setInstrument(testInst);
+        ws->mutableDetectorInfo().setMasked(1,true);
+        ws->setDistribution(true);
+*/
         Mantid::API::AnalysisDataService::Instance().add(wsName, ws);
 
-        for(int i = 0; i < 3; i++) {
+        for(int i = 0; i < 1000; i++) {
+            std::cout << "i = " << i << std::endl;
             auto &X = ws->mutableX(i);
             auto &Y = ws->mutableY(i);
             for(int j = 0; j < 1001; j++) {
+                //std::cout << "j = " << j << std::endl;
                 X[j] = (j+1) * 0.5;
-                std::cout << "i = " << i << std::endl;
+
                 Y[j] =  ((1.1+j))/2*0.5;
-                std::cout << "j = " << j << std::endl;
+
             }
         }
 
@@ -336,7 +371,8 @@ public:
         std::cout << "Problem in for?" << std::endl;
         for (int i=0; i < numberOfIterations; i++) {
             std::cout << "iteration nr. " << i << " of " << numberOfIterations;
-            saveAlgPtrs.emplace_back(setupAlg());
+            //saveAlgPtrs.emplace_back(setupAlg());
+            saveAlgPtrs.push_back(setupAlg());
             std::cout << "saveAlgPtrs at " << i << " = " << saveAlgPtrs[i] << std::endl;
         }
 
