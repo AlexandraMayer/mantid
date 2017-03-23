@@ -108,6 +108,7 @@ set ( SRC_FILES
 	src/LoadTBL.cpp
 	src/LoadTOFRawNexus.cpp
 	src/LoadVulcanCalFile.cpp
+	src/LoadYDA.cpp
 	src/MaskDetectors.cpp
 	src/MaskDetectorsInShape.cpp
 	src/MergeLogs.cpp
@@ -163,7 +164,7 @@ set ( SRC_FILES
 	src/SaveTBL.cpp
 	src/SaveToSNSHistogramNexus.cpp
 	src/SaveVTK.cpp
-        src/SaveYDA.cpp
+	src/SaveYDA.cpp
 	src/SetBeam.cpp
 	src/SetSample.cpp
 	src/SetSampleMaterial.cpp
@@ -279,6 +280,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/LoadTBL.h
 	inc/MantidDataHandling/LoadTOFRawNexus.h
 	inc/MantidDataHandling/LoadVulcanCalFile.h
+	inc/MantidDataHandling/LoadYDA.h
 	inc/MantidDataHandling/MaskDetectors.h
 	inc/MantidDataHandling/MaskDetectorsInShape.h
 	inc/MantidDataHandling/MergeLogs.h
@@ -335,7 +337,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/SaveTBL.h
 	inc/MantidDataHandling/SaveToSNSHistogramNexus.h
 	inc/MantidDataHandling/SaveVTK.h
-        inc/MantidDataHandling/SaveYDA.h
+	inc/MantidDataHandling/SaveYDA.h
 	inc/MantidDataHandling/SetBeam.h
 	inc/MantidDataHandling/SetSample.h
 	inc/MantidDataHandling/SetSampleMaterial.h
@@ -450,6 +452,7 @@ set ( TEST_FILES
 	LoadTOFRawNexusTest.h
 	LoadTest.h
 	LoadVulcanCalFileTest.h
+	LoadYDATest.h
 	MaskDetectorsInShapeTest.h
 	MaskDetectorsTest.h
 	MergeLogsTest.h
@@ -500,7 +503,7 @@ set ( TEST_FILES
 	SaveSavuTomoConfigTest.h
 	SaveTBLTest.h
 	SaveToSNSHistogramNexusTest.h
-        SaveYDATest.h
+	SaveYDATest.h
 	SetBeamTest.h
 	SetSampleMaterialTest.h
 	SetSampleTest.h
