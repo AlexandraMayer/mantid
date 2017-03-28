@@ -14,6 +14,8 @@
 #include <math.h>
 
 
+
+
 namespace Mantid {
 namespace DataHandling {
 
@@ -53,7 +55,36 @@ const std::string LoadYDA::summary() const {
 }
 
 int LoadYDA::confidence(Kernel::FileDescriptor &descriptor) const {
-    return 50;
+    if((descriptor.extension() != ".yaml")||(descriptor.extension() != ".txt")) {
+        return 0;
+    }
+    YAML::Node fileN = YAML::LoadFile(descriptor.filename());
+    if(fileN.IsNull()) {
+        return 0;
+    }
+    auto &file = descriptor.data();
+
+    std::string fileline;
+    int confidence(0);
+
+    std::getline(file,fileline);
+    if(fileline.find("Meta:") != std::string::npos) {
+        confidence += 20;
+        std::getline(file,fileline);
+        if(fileline.find("format:") != std::string::npos && fileline.find("yaml") != std::string::npos) {
+            confidence += 20;
+            std::getline(file,fileline);
+            if(fileline.find("type: generic tabular data") != std::string::npos) {
+                confidence += 20;
+            }
+        }
+    } else {
+        confidence = 0;
+    }
+    g_log.debug("confidence");
+    g_log.debug(std::to_string(confidence));
+    return confidence;
+
 }
 
 //----------------------------------------------------------------------------------------------
@@ -61,7 +92,7 @@ int LoadYDA::confidence(Kernel::FileDescriptor &descriptor) const {
  */
 void LoadYDA::init() {
   declareProperty(Kernel::make_unique<API::FileProperty>(
-                      "Filename", "",API::FileProperty::Load,".yaml"),
+                      "Filename", "",API::FileProperty::Load,""),
       "The name of the file to read.");
   declareProperty(Kernel::make_unique<WorkspaceProperty<>>(
                       "OutputWorkspace", "",Kernel::Direction::Output),
@@ -72,81 +103,122 @@ void LoadYDA::init() {
 /** Execute the algorithm.
  */
 void LoadYDA::exec() {
+
   const std::string filename = getPropertyValue("Filename");
   f = YAML::LoadFile(filename);
+
   g_log.debug(std::to_string(f.IsNull()));
   for(YAML::const_iterator it = f.begin(); it != f.end();++it) {
       g_log.debug(it->first.as<std::string>());
   }
+  if(f.IsNull()) {
+      g_log.warning("Error reading file " + filename);
+  }
+
 
   API::MatrixWorkspace_sptr ws;
-  auto slices = f[" Slices"];
 
+  g_log.debug("Problem with slices?");
+  YAML::Node slices = f["Slices"];
+
+
+  if(slices.IsNull() || slices.size() <= 0) {
+      g_log.warning("No slices data found");
+      histLength = 0;
+  } else {
   xLength = slices[0]["x"].size() + 1;
   g_log.debug(std::to_string(xLength));
   yLength = slices[0]["y"].size();
-  histLength = slices.size();
+    histLength = slices.size();
   g_log.debug(std::to_string(histLength));
 
-  ws = setupWs();
-
-
-  g_log.debug(f["History"][0].as<std::string>());
-
-  auto hist = f["History"];
-  g_log.debug(std::to_string(hist.size()));
-  std::string propn = hist[0].as<std::string>();
-  propn = propn.back();
-  g_log.debug(propn);
-  addSampleLogData(ws,"poposal_number",propn);
-  std::string propt = hist[1].as<std::string>();
-  g_log.debug(propt);
-  addSampleLogData(ws,"poposal_title",propt);
-  std::string expteam = hist[2].as<std::string>();
-  g_log.debug(expteam);
-  addSampleLogData(ws,"experiment_team",expteam);
-
-  auto rpar = f["RPar"];
-  std::string temp = rpar[0]["val"].as<std::string>();
-  g_log.debug(temp);
-  addSampleLogData(ws,"temperature", temp);
-  std::string ei = rpar[1]["val"].as<std::string>();
-  g_log.debug(ei);
-  addSampleLogData(ws,"Ei",ei);
-  auto coord = f["Coord"];
-  std::string z = coord["z"]["name"].as<std::string>();
-  g_log.debug(z);
-  if(z == "q") {
-      ws->getAxis(1)->unit() = Kernel::UnitFactory::Instance().create("MomentumTransfer");
   }
+  if(histLength <= 0) {
+      g_log.warning("slices to small!");
 
-  std::vector<std::vector<double>> xAxis;
-  std::vector<std::vector<double>> yAxis;
-  std::vector<std::vector<double>> eAxis;
+  } else {
 
-  getAxisVal(xAxis,yAxis,eAxis);
-
-
+      ws = setupWs();
 
 
-  g_log.debug(slices[0]["x"][0].as<std::string>());
-/*
-  for(unsigned int i = 0; i < slices.size(); i++) {
-      auto xati = slices[i]["x"];
-      g_log.debug(xati[0].as<std::string>());
-      double diff = xati[1].as<double>() - xati[0].as<double>();
-      g_log.debug(std::to_string(diff));
-      double first = round( (((xati[0].as<double>()-diff)+xati[0].as<double>())/2) * 10000.0 ) / 10000.0;
-      g_log.debug(std::to_string(first));
 
-  }
-*/
-  for(size_t i = 0; i < histLength; i++) {
-      ws->mutableX(i) = xAxis.at(i);
-      ws->mutableY(i) = yAxis.at(i);
-      ws->mutableE(i) = eAxis.at(i);
-  }
-  setProperty("OutputWorkspace",ws);
+
+      g_log.debug(f["History"][0].as<std::string>());
+
+      YAML::Node hist = f["History"];
+      if(hist.IsNull() || hist.size() < 4) {
+        g_log.warning("History must have 4 or more arguments");
+      } else {
+          //g_log.debug(std::to_string(hist.size()));
+          std::string propn = hist[0].as<std::string>();
+          propn = propn.back();
+          //g_log.debug(propn);
+          addSampleLogData(ws,"poposal_number",propn);
+          std::string propt = hist[1].as<std::string>();
+          //g_log.debug(propt);
+          addSampleLogData(ws,"poposal_title",propt);
+          std::string expteam = hist[2].as<std::string>();
+          //g_log.debug(expteam);
+          addSampleLogData(ws,"experiment_team",expteam);
+      }
+
+      YAML::Node rpar = f["RPar"];
+      if(rpar.IsNull() || rpar.size() < 2) {
+        g_log.warning("Rpar has less than 2 arguments or was not found");
+      } else {
+          std::string temp = rpar[0]["val"].as<std::string>();
+          //g_log.debug(temp);
+          addSampleLogData(ws,"temperature", temp);
+          std::string ei = rpar[1]["val"].as<std::string>();
+          //g_log.debug(ei);
+          addSampleLogData(ws,"Ei",ei);
+      }
+      YAML::Node coord = f["Coord"];
+
+      if(coord.IsNull() || coord.size() < 3) {
+        g_log.warning("Coord has less than 3 arguments or was not found");
+      } else {
+          std::string z = coord["z"]["name"].as<std::string>();
+          if(coord["z"].IsNull()) {
+              g_log.warning("No z coordinate found");
+          } else if(coord["z"]["name"].IsNull()) {
+              g_log.warning("No name for z found");
+          } else {
+          //g_log.debug(z);
+              if(z == "q") {
+                  ws->getAxis(1)->unit() = Kernel::UnitFactory::Instance().create("MomentumTransfer");
+              } else {
+                  ws->setYUnitLabel("Counts");
+              }
+          }
+      }
+
+
+      std::vector<std::vector<double>> xAxis;
+      std::vector<std::vector<double>> yAxis;
+      std::vector<std::vector<double>> eAxis;
+
+      getAxisVal(xAxis,yAxis,eAxis);
+
+      //g_log.debug(slices[0]["x"][0].as<std::string>());
+    /*
+      for(unsigned int i = 0; i < slices.size(); i++) {
+          auto xati = slices[i]["x"];
+          g_log.debug(xati[0].as<std::string>());
+          double diff = xati[1].as<double>() - xati[0].as<double>();
+          g_log.debug(std::to_string(diff));
+          double first = round( (((xati[0].as<double>()-diff)+xati[0].as<double>())/2) * 10000.0 ) / 10000.0;
+          g_log.debug(std::to_string(first));
+
+      }
+    */
+      for(size_t i = 0; i < histLength; i++) {
+          ws->mutableX(i) = xAxis.at(i);
+          ws->mutableY(i) = yAxis.at(i);
+          ws->mutableE(i) = eAxis.at(i);
+      }
+   }
+   setProperty("OutputWorkspace",ws);
 
 }
 
@@ -159,36 +231,53 @@ API::MatrixWorkspace_sptr LoadYDA::setupWs() const {
 }
 
 void LoadYDA::getAxisVal(std::vector<std::vector<double> > &x, std::vector<std::vector<double> > &y, std::vector<std::vector<double> > &e) {
-    auto slices = f["Slices"];
-    g_log.debug("in getAxisVal");
-    for(unsigned int i = 0; i < slices.size(); i++) {
-        auto xati = slices[i]["x"];
-        g_log.debug(xati[0].as<std::string>());
-        double diff = xati[1].as<double>() - xati[0].as<double>();
-        g_log.debug(std::to_string(diff));
-        double first = round( (((xati[0].as<double>()-diff)+xati[0].as<double>())/2) * 10000.0 ) / 10000.0;
-        g_log.debug(std::to_string(first));
-        std::vector<double> xs;
-        xs.push_back(first);
-        for(unsigned int j = 0; j < xati.size();j++) {
-            xs.push_back(first+diff);
-            first = first + diff;
-            g_log.debug(std::to_string(first));
+    YAML::Node slices = f["Slices"];
+    if(slices.size() <= 0) {
+        g_log.warning("No slices in this file");
+    } else {
+        for(unsigned int i = 0; i < slices.size(); i++) {
+            YAML::Node xati = slices[i]["x"];
+
+            std::vector<double> xs;
+            if(xati.size() <= 0) {
+                g_log.warning("Not enough x values in slices");
+            } else if(xati.size() == 1) {
+                xs.push_back(xati[0].as<double>());
+                x.push_back(xs);
+            } else {
+                double diff = xati[1].as<double>() - xati[0].as<double>();
+                //g_log.debug(std::to_string(diff));
+                double first = round( (((xati[0].as<double>()-diff)+xati[0].as<double>())/2) * 10000.0 ) / 10000.0;
+                //g_log.debug(std::to_string(first));
+
+                xs.push_back(first);
+                for(unsigned int j = 0; j < xati.size();j++) {
+                    xs.push_back(first+diff);
+                    first = first + diff;
+                    //g_log.debug(std::to_string(first));
+                }
+                x.push_back(xs);
+            }
+
+            YAML::Node yati = slices[i]["y"];
+
+            if(yati.size() <= 0) {
+                g_log.warning("Not enough y values in slices");
+            } else {
+                std::vector<double> ys;
+                std::vector<double> es;
+
+
+                for(unsigned int j = 0; j < yati.size();j++) {
+                    ys.push_back(yati[j].as<double>());
+                   // g_log.debug(yati[j].as<std::string>());
+                    es.push_back(sqrt(yati[j].as<double>()));
+                }
+                y.push_back(ys);
+                e.push_back(es);
+            }
+
         }
-        x.push_back(xs);
-
-        auto yati = slices[i]["y"];
-        std::vector<double> ys;
-        std::vector<double> es;
-        for(unsigned int j = 0; j < yati.size();j++) {
-            ys.push_back(yati[j].as<double>());
-            g_log.debug(yati[j].as<std::string>());
-            es.push_back(sqrt(yati[j].as<double>()));
-        }
-        y.push_back(ys);
-        e.push_back(es);
-
-
     }
 }
 
