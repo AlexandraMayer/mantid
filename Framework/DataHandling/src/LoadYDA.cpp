@@ -18,7 +18,7 @@
 
 namespace Mantid {
 namespace DataHandling {
-
+API::MatrixWorkspace_sptr errorws();
 using Mantid::Kernel::Direction;
 using Mantid::API::WorkspaceProperty;
 
@@ -105,7 +105,15 @@ void LoadYDA::init() {
 void LoadYDA::exec() {
 
   const std::string filename = getPropertyValue("Filename");
-  f = YAML::LoadFile(filename);
+  try {
+    f =  YAML::LoadFile(filename);
+  } catch (const std::exception e) {
+  g_log.debug("abfrage so moglich");
+  f = YAML::Null;
+  }
+
+  //YAML::LoadFile(filename);
+  g_log.debug("no problem with initialzation");
 
   g_log.debug(std::to_string(f.IsNull()));
   for(YAML::const_iterator it = f.begin(); it != f.end();++it) {
@@ -116,7 +124,7 @@ void LoadYDA::exec() {
   }
 
 
-  API::MatrixWorkspace_sptr ws;
+  API::MatrixWorkspace_sptr ws = nullptr;
 
   g_log.debug("Problem with slices?");
   YAML::Node slices = f["Slices"];
@@ -135,7 +143,8 @@ void LoadYDA::exec() {
   }
   if(histLength <= 0) {
       g_log.warning("slices to small!");
-
+      API::MatrixWorkspace_sptr error = errorws();
+      setProperty("OutputWorkspace",error);
   } else {
 
       ws = setupWs();
@@ -217,8 +226,9 @@ void LoadYDA::exec() {
           ws->mutableY(i) = yAxis.at(i);
           ws->mutableE(i) = eAxis.at(i);
       }
+    setProperty("OutputWorkspace",ws);
    }
-   setProperty("OutputWorkspace",ws);
+
 
 }
 
@@ -227,6 +237,11 @@ API::MatrixWorkspace_sptr LoadYDA::setupWs() const {
                 API::WorkspaceFactory::Instance().create("Workspace2D",histLength,xLength,yLength));
     ws->getAxis(0)->unit() = Kernel::UnitFactory::Instance().create("DeltaE");
 
+    return ws;
+}
+
+API::MatrixWorkspace_sptr errorws() {
+    API::MatrixWorkspace_sptr ws = boost::dynamic_pointer_cast<API::MatrixWorkspace>(API::WorkspaceFactory::Instance().create("Workspace2D",1,1,1));
     return ws;
 }
 
