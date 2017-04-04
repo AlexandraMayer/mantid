@@ -70,7 +70,7 @@ class LoadDNSLegacyTest(unittest.TestCase):
 
     def test_LoadInvalidData(self):
         outputWorkspaceName = "LoadDNSLegacyTest_Test2"
-        filename = "dns-incomplete.d_dat"
+        filename = "dns_-incomplete.d_dat"
         self._createIncompleteFile(filename)
         self.assertRaises(RuntimeError, LoadDNSLegacy,  Filename=filename,
                           OutputWorkspace=outputWorkspaceName, CoilCurrentsTable=self.curtable)

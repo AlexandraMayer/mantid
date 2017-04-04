@@ -11,6 +11,7 @@ from reduction_gui.instruments.reflectometer_sf_interface_dev import REFLSFInter
 from reduction_gui.instruments.dgs_interface_dev import DgsInterface
 from reduction_gui.instruments.diffraction_interface_dev import DiffractionInterface
 from reduction_gui.instruments.toftof_interface_dev import TOFTOFInterface
+from reduction_gui.instruments.dns_interface_dev import DNSInterface
 
 INSTRUMENT_DICT = {"HFIR": {"BIOSANS": HFIRInterface,
                             "GPSANS": HFIRInterface},
@@ -18,7 +19,7 @@ INSTRUMENT_DICT = {"HFIR": {"BIOSANS": HFIRInterface,
                             "MARI": DgsInterface,
                             "MERLIN": DgsInterface},
                    "MLZ":  {"TOFTOF": TOFTOFInterface,
-			    "DNS": DNSInterface},
+                            "DNS": DNSInterface},
                    "SNS":  {"ARCS": DgsInterface,
                             "CNCS": DgsInterface,
                             "EQSANS": EQSANSInterface,
