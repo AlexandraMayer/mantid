@@ -48,8 +48,8 @@ void SaveYDA::getBinCenters(Axis *axis, std::vector<double>& result) {
 std::map<std::string, std::string> SaveYDA::validateInputs() {
 
     std::map<std::string, std::string> issues;
-/*
-    MatrixWorkspace_const_sptr*/ DataObjects::Workspace2D_sptr inws = getProperty("InputWorkspace");
+
+    DataObjects::Workspace2D_sptr inws = getProperty("InputWorkspace");
 
     if(!inws)
         return issues;
@@ -66,7 +66,7 @@ void SaveYDA::exec() {
     const std::string filename = getProperty("Filename");
     g_log.debug() << "SaveYDA filename = " << filename << std::endl;
 
-    /*MatrixWorkspace_const_sptr*/ DataObjects::Workspace2D_sptr ws =getProperty("InputWorkspace");
+    DataObjects::Workspace2D_sptr ws =getProperty("InputWorkspace");
     g_log.debug() << "workspace: " << ws;
 
     //open file for writing
@@ -117,7 +117,7 @@ void SaveYDA::exec() {
 
 
 
-    if(!(ws->run().hasProperty("temperature"))) {
+   if(!(ws->run().hasProperty("temperature"))) {
         g_log.warning("no temperature found");
     } else {
         double temperature = ws->run().getLogAsSingleValue("temperature");
@@ -149,10 +149,10 @@ void SaveYDA::exec() {
 
     Axis *X = ws->getAxis(0);
 
-    //if(X != nullptr)
+    if(X != nullptr)
     Coordinate xc;
     xc.designation = "x";
-    /*
+
     if(X->isSpectra()) {
         xc.name = "2th";
         xc.unit = "deg";
@@ -164,10 +164,10 @@ void SaveYDA::exec() {
             xc.unit = X->unit()->unitID();
         }
         if(xc.unit == "DeltaE")
-        */
+
     xc.name = "w";
     xc.unit = "meV";
-    //}
+    }
 
     coord.push_back(xc);
 
@@ -203,7 +203,7 @@ void SaveYDA::exec() {
 
 
 
-    std::vector<double> z;//bin_centers;
+    std::vector<double> z;
 
     if(Z->isSpectra()) {
 
@@ -212,17 +212,17 @@ void SaveYDA::exec() {
             if(!spectrumInfo.isMonitor(i)) {
                 double twoTheta = spectrumInfo.twoTheta(i);
                 twoTheta = (180*twoTheta)/M_PI;
-                /*bin_centers*/z.push_back(twoTheta);
+                z.push_back(twoTheta);
             }
         }
     } else if(Z->length() == nHist) {
 
         for(size_t i = 0; i < ws->getAxis(1)->length(); i++)
-            /*bin_centers*/z.push_back(ws->getAxis(1)->getValue(i));
+            z.push_back(ws->getAxis(1)->getValue(i));
 
     } else {
 
-        getBinCenters(ws->getAxis(1), /*bin_centers*/z);
+        getBinCenters(ws->getAxis(1), z);
 
     }
 
@@ -239,7 +239,7 @@ void SaveYDA::exec() {
             y.push_back(ys[k]);
         }
 
-        slices.push_back(Spectrum((int)i,/*bin_centers*/z[i],x_centers,y));
+        slices.push_back(Spectrum((int)i, z[i],x_centers,y));
     }
 
 
@@ -255,9 +255,9 @@ void SaveYDA::exec() {
 
 
 YAML::Emitter& operator << (YAML::Emitter& em,const Coordinate c) {
-    em/* << YAML::BeginMap*/ << YAML::Key << c.designation << YAML::Value << YAML::Flow << YAML::BeginMap
+    em << YAML::Key << c.designation << YAML::Value << YAML::Flow << YAML::BeginMap
        << YAML::Key << "name" << YAML::Value << c.name << YAML::Key << "unit"
-       << YAML::Value << c.unit << YAML::EndMap /*<< YAML::EndMap*/;
+       << YAML::Value << c.unit << YAML::EndMap;
     return em;
 }
 

@@ -3,31 +3,42 @@ import xml.dom.minidom
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from ruamel.yaml.comments import CommentedMap
+import os
 
 from reduction_gui.reduction.scripter import BaseScriptElement, BaseReductionScripter
 
 
 class DNSScriptElement(BaseScriptElement):
 
-    NORM_DURATION = 0
+    NORM_TIME     = 0
     NORM_MONITOR  = 1
 
-    OUT_SOFT_MAG     = 0
-    OUT_SINGLE_CRYST = 1
+    OUT_POLY_AMOR     = 0
+    OUT_SINGLE_CRYST  = 1
 
-    DEF_TwoTheata = 0.05
-    DEF_normalise = NORM_DURATION
+    SEP_XYZ = 0
+    SEP_COH = 1
+    SEP_NO  = 2
 
-    DEF_NEUT_WAVE_LEN = 0.0
+    DEF_SaveToFile = False
 
-    DEF_MASK_MIN_ANGLE = 0.0
-    DEF_MASK_MAX_ANGLE = 0.0
+    DEF_DetEffi      = True
+    DEF_SumVan       = False
+    DEF_SubInst      = True
+    DEF_SubFac       = 1.0
+    DEF_FlippRatio   = True
+    DEF_FlippFac     = 1.0
+    DEF_MultiSF      = 0.0
+    DEF_Normalise    = NORM_TIME
+    DEF_NeutWaveLen = 0.0
+    DEF_Intermadiate = False
 
-    DEF_output = OUT_SOFT_MAG
+    DEF_Output = OUT_POLY_AMOR
 
     DEF_OutAxisQ      = True
-    DEF_OutAxisD      = False
-    DEF_OutAxis2Theta = False
+    DEF_OutAxisD      = True
+    DEF_OutAxis2Theta = True
+    DEF_Seperation    = SEP_XYZ
 
     DEF_OmegaOffset  = 0.0
     DEF_LatticeA     = 0.0
@@ -43,20 +54,6 @@ class DNSScriptElement(BaseScriptElement):
     DEF_ScatterV2    = 0.0
     DEF_ScatterV3    = 0.0
 
-    DEF_DetEffi    = True
-    DEF_SumVan     = False
-    DEF_SubInst    = True
-    DEF_FlippRatio = True
-
-    DEF_MultiSF = 0.0
-
-    DEF_Intermadiate = False
-
-    #DEF_VANSuffix  = 'vana'
-    #DEF_NiCrSuffix = 'nicr'
-    #DEF_BackSuffix = 'leer'
-
-
     XML_TAG = 'DNSReducton'
 
     def reset(self):
@@ -64,25 +61,37 @@ class DNSScriptElement(BaseScriptElement):
         self.facility_name   = ''
         self.instrument_name = ''
 
-        #self.currTable = ''
-        self.twoTheta  = self.DEF_TwoTheata
+        self.sampleDataPath = ''
+        self.filePrefix     = ''
+        self.fileSuffix     = ''
 
-        self.normalise = self.DEF_normalise
+        self.dataRuns = []
 
-        self.neutronWaveLen = self.DEF_NEUT_WAVE_LEN
+        self.maskAngles = []
 
-        self.maskMinAngle = self.DEF_MASK_MIN_ANGLE
-        self.maskMaxAngle = self.DEF_MASK_MAX_ANGLE
-
+        self.saveToFile = self.DEF_SaveToFile
         self.outDir = ''
-
         self.outPrefix = ''
 
-        self.out = self.DEF_output
+        self.standardDataPath = ''
+
+        self.detEffi        = self.DEF_DetEffi
+        self.sumVan         = self.DEF_SumVan
+        self.subInst        = self.DEF_SubInst
+        self.subFac         = self.DEF_SubFac
+        self.flippRatio     = self.DEF_FlippRatio
+        self.flippFac       = self.DEF_FlippFac
+        self.multiSF        = self.DEF_MultiSF
+        self.normalise      = self.DEF_Normalise
+        self.neutronWaveLen = self.DEF_NeutWaveLen
+        self.intermadiate   = self.DEF_Intermadiate
+
+        self.out = self.DEF_Output
 
         self.outAxisQ      = self.DEF_OutAxisQ
         self.outAxisD      = self.DEF_OutAxisD
         self.outAxis2Theta = self.DEF_OutAxis2Theta
+        self.seperation    = self.DEF_Seperation
 
         self.omegaOffset    = self.DEF_OmegaOffset
         self.latticeA       = self.DEF_LatticeA
@@ -98,27 +107,6 @@ class DNSScriptElement(BaseScriptElement):
         self.scatterV2      = self.DEF_ScatterV2
         self.scatterV3      = self.DEF_ScatterV3
 
-        self.detEffi    = self.DEF_DetEffi
-        self.sumVan     = self.DEF_SumVan
-        self.subInst    = self.DEF_SubInst
-        self.flippRatio = self.DEF_FlippRatio
-
-        self.multiSF = self.DEF_MultiSF
-
-        self.intermadiate = self.DEF_Intermadiate
-
-        self.standardDataPath = ''
-        #self.VanSuffix        = self.DEF_VANSuffix
-        #self.NiCrSuffix       = self.DEF_NiCrSuffix
-        #self.backSuffix       = self.DEF_BackSuffix
-
-        self.sampleDataPath = ''
-
-        self.filePrefix = ''
-        self.fileSuffix = ''
-
-        self.dataRuns = []
-
     def to_xml(self):
 
         res =['']
@@ -126,21 +114,42 @@ class DNSScriptElement(BaseScriptElement):
         def put(tag, val):
             res[0] += ' <{0}>{1}</{0}>\n'.format(tag, str(val))
 
-        #put('current_table',       self.currTable)
-        put('two_Theta',           self.twoTheta)
-        put('normalise',           self.normalise)
-        put('neutron_wave_length', self.neutronWaveLen)
+        put('sample_data_path', self.sampleDataPath)
+        put('file_prefix',      self.filePrefix)
+        put('file_suffix',      self.fileSuffix)
 
-        put('mask_detector_min_angle', self.maskMinAngle)
-        put('mask_detector_max_angle', self.maskMaxAngle)
+        for (runs, ws, cmnt) in self.dataRuns:
+            put('data_runs',             runs)
+            put('data_output_worksoace', ws)
+            put('data_comment',          cmnt)
 
+        for(min, max) in self.maskAngles:
+            put('mask_min_Angle', min)
+            put('mask_max_Angle', max)
+
+        put('save_to_file',       self.saveToFile)
         put('output_directory',   self.outDir)
         put('output_file_prefix', self.outPrefix)
+
+        put('standard_data_path', self.standardDataPath)
+
+        put('detector_efficiency',        self.detEffi)
+        put('sum_Vanadium',               self.sumVan)
+        put('subtract_instrument',        self.subInst)
+        put('subtract_instrument_factor', self.subFac)
+        put('flipping_ratio',             self.flippRatio)
+        put('flipping_ratio_factor',      self.flippFac)
+        put('multiple_SF_scattering',     self.multiSF)
+        put('normalise',                  self.normalise)
+        put('neutron_wave_length',        self.neutronWaveLen)
+        put('keep_intermediate',          self.intermadiate)
+
         put('output',             self.out)
 
         put('output_Axis_q',      self.outAxisQ)
         put('output_Axis_d',      self.outAxisD)
         put('output_Axis_2Theta', self.outAxis2Theta)
+        put('seperation',         self.seperation)
 
         put('lattice_parameters_a',     self.latticeA)
         put('lattice_parameters_b',     self.latticeB)
@@ -154,26 +163,6 @@ class DNSScriptElement(BaseScriptElement):
         put('scattering_Plane_v_1',     self.scatterV1)
         put('scattering_Plane_v_2',     self.scatterV2)
         put('scattering_Plane_v_3',     self.scatterV3)
-
-        put('detector_efficiency',    self.detEffi)
-        put('sum_Vanadium',           self.sumVan)
-        put('subtract_instrument',    self.subInst)
-        put('flipping_ratio',         self.flippRatio)
-        put('multiple_SF_scattering', self.multiSF)
-        put('keep_intermediate',      self.intermadiate)
-
-        put('standard_data_path', self.standardDataPath)
-        #put('Vanadium_suffix',    self.VanSuffix)
-        #put('NiCr_suffix',        self.NiCrSuffix)
-        #put('background_suffix',  self.backSuffix)
-
-        put('sample_data_path', self.sampleDataPath)
-        put('file_prefix',      self.filePrefix)
-        put('file_suffix',      self.fileSuffix)
-
-        for (runs, cmnt) in self.dataRuns:
-            put('data_runs',    runs)
-            put('data_comment', cmnt)
 
         return '<{0}>\n{1}</{0}>\n'.format(self.XML_TAG, res[0])
 
@@ -203,21 +192,45 @@ class DNSScriptElement(BaseScriptElement):
             def get_bol(tag,default):
                 return BaseScriptElement.getBoolElement(dom, tag, default=default)
 
-            #self.currTable      = get_str('current_table')
-            self.twoTheta       = get_flt('two_Theta',           self.DEF_TwoTheata)
-            self.normalise      = get_int('normalise',           self.DEF_normalise)
-            self.neutronWaveLen = get_flt('neutron_wave_length', self.DEF_NEUT_WAVE_LEN)
+            self.sampleDataPath = get_str('sample_data_path')
+            self.filePrefix     = get_str('file_prefix')
+            self.fileSuffix     = get_str('file_suffix')
 
-            self.maskMinAngle = get_flt('mask_detector_min_angle', self.DEF_MASK_MIN_ANGLE)
-            self.maskMaxAngle = get_flt('mask_detector_max_angle', self.DEF_MASK_MAX_ANGLE)
+            dataRuns  = get_strlst('data_runs')
+            dataOutWs = get_strlst('data_output_worksoace')
+            dataCmts  = get_strlst('data_comment')
 
-            self.outDir    = get_str('output_directory')
-            self.outPrefix = get_str('output_file_prefix')
-            self.out       = get_int('output', self.DEF_output)
+            for i in range(min(len(dataRuns), len(dataOutWs), len(dataCmts))):
+                self.dataRuns.append((dataRuns[i], dataOutWs[i], dataCmts[i]))
+
+            maskMin = get_strlst('mask_min_Angle')
+            maskMax = get_strlst('mask_max_Angle')
+
+            for i in range(min(len(maskMin), len(maskMax))):
+                self.maskAngles.append((maskMin[i], maskMax[i]))
+
+            self.saveToFile = get_bol('save_to_file', self.DEF_SaveToFile)
+            self.outDir     = get_str('output_directory')
+            self.outPrefix  = get_str('output_file_prefix')
+
+            self.standardDataPath = get_str('standard_data_path')
+
+            self.detEffi        = get_bol('detector_efficiency',        self.DEF_DetEffi)
+            self.sumVan         = get_bol('sum_Vanadium',               self.DEF_SumVan)
+            self.subInst        = get_bol('subtract_instrument',        self.DEF_SubInst)
+            self.subFac         = get_flt('subtract_instrument_factor', self.subFac)
+            self.flippRatio     = get_bol('flipping_ratio',             self.DEF_FlippRatio)
+            self.multiSF        = get_flt('multiple_SF_scattering',     self.DEF_MultiSF)
+            self.normalise      = get_int('normalise',                  self.DEF_Normalise)
+            self.neutronWaveLen = get_flt('neutron_wave_length',        self.DEF_NeutWaveLen)
+            self.intermadiate   = get_bol('keep_intermediate',          self.DEF_Intermadiate)
+
+            self.out        = get_int('output', self.DEF_Output)
 
             self.outAxisQ      = get_bol('output_Axis_q',      self.DEF_OutAxisQ)
             self.outAxisD      = get_bol('output_Axis_d',      self.DEF_OutAxisD)
             self.outAxis2Theta = get_bol('output_Axis_2Theta', self.DEF_OutAxis2Theta)
+            self.seperation    = get_int('seperation',         self.DEF_Seperation)
 
             self.latticeA     = get_flt('lattice_parameters_a',     self.DEF_LatticeA)
             self.latticeB     = get_flt('lattice_parameters_b',     self.DEF_LatticeB)
@@ -232,69 +245,102 @@ class DNSScriptElement(BaseScriptElement):
             self.scatterV2    = get_flt('scattering_Plane_v_2',     self.DEF_ScatterV2)
             self.scatterV3    = get_flt('scattering_Plane_v_3',     self.DEF_ScatterV3)
 
-            self.detEffi      = get_bol('detector_efficiency',    self.DEF_DetEffi)
-            self.sumVan       = get_bol('sum_Vanadium',           self.DEF_SumVan)
-            self.subInst      = get_bol('subtract_instrument',    self.DEF_SubInst)
-            self.flippRatio   = get_bol('flipping_ratio',         self.DEF_FlippRatio)
-            self.multiSF      = get_flt('multiple_SF_scattering', self.DEF_MultiSF)
-            self.intermadiate = get_bol('keep_intermediate',      self.DEF_Intermadiate)
-
-            self.standardDataPath = get_str('standard_data_path')
-            #self.VanSuffix        = get_str('Vanadium_suffix',   self.DEF_VANSuffix)
-            #self.NiCrSuffix       = get_str('NiCr_suffix',       self.DEF_NiCrSuffix)
-            #self.backSuffix       = get_str('background_suffix', self.DEF_BackSuffix)
-
-            self.sampleDataPath = get_str('sample_data_path')
-            self.filePrefix     = get_str('file_prefix')
-            self.fileSuffix     = get_str('file_suffix')
-
-            dataRuns = get_strlst('data_runs')
-            dataCmts = get_strlst('data_comment')
-
-            for i in range(min(len(dataRuns), len(dataCmts))):
-                self.dataRuns.append((dataRuns[i], dataCmts[i]))
-
-
     def to_script(self):
 
         def error(message):
             raise RuntimeError('DNS reduction error: ' + message)
 
-        if not(self.maskMinAngle <= self.maskMaxAngle):
-            error('incorrect mask detector angles')
+        if not os.path.lexists(self.sampleDataPath):
+            error('sample data path not found')
+
+        if not self.filePrefix:
+            error('missing sample data file prefix')
+
+        if not self.fileSuffix:
+            error('missing sample data file suffix')
 
         if not self.dataRuns:
             error('missing data runs')
 
+        if not self.maskAngles:
+            error('missing mask detectors angles')
+
+        for i in range(len(self.maskAngles)):
+            (minA, maxA) = self.maskAngles[i]
+            if not float(minA) < float(maxA):
+                errormess = 'Min Angle must be smaller than max Angle (error in row ' + str(i+1) + ')'
+                error(errormess)
+
+        if self.saveToFile:
+            if not os.path.lexists(self.outDir):
+                error('output directory not found')
+            elif not os.access(self.outDir, os.W_OK):
+                error('cant write in directory ' + str(self.outDir))
+            if not self.outPrefix:
+                error('missing output file prefix')
+
+        if not os.path.lexists(self.standardDataPath):
+            error('standard data path not found')
+
+        if self.out == self.OUT_POLY_AMOR and not self.outAxisQ and not self.outAxisD and not self.outAxis2Theta:
+            error('no output axis selected')
+
         parameters = CommentedMap()
 
-        general = CommentedMap()
+        sampleData = CommentedMap()
 
-        #general["Current table path"] = self.currTable
-        general['2 Theta tolerance'] = self.twoTheta
-        if self.normalise == self.NORM_MONITOR:
-            norm = 'monitor'
-        else:
-            norm = 'duration'
-        general['Normalization'] = norm
-        general['Neutron wavelength'] = self.neutronWaveLen
+        sampleData['Data path']   = self.sampleDataPath
+        sampleData['File prefix'] = self.filePrefix
+        sampleData['File suffix'] = self.fileSuffix
+        sampleData['Data Table']  = self.dataRuns
 
-        parameters['General'] = general
+        parameters['Sample Data'] = sampleData
 
         maskDet = CommentedMap()
-
-        maskDet['Min Angle'] = self.maskMinAngle
-        maskDet['Max Angle'] = self.maskMaxAngle
+        maskDet['Mask Detectors Table'] = self.maskAngles
 
         parameters['Mask Detectors'] = maskDet
 
-        output = CommentedMap()
+        saveToFile = CommentedMap()
 
-        output['Output directory'] = self.outDir
-        output['Output file prefix'] = self.outPrefix
+        saveToFile['Save to file?']       = str(self.saveToFile)
+        if self.saveToFile:
+         saveToFile['Output directory']   = self.outDir
+         saveToFile['Output file prefix'] = self.outPrefix
 
-        if self.out == self.OUT_SOFT_MAG:
-            output['Output settings'] = 'Soft matter/Magnetic powder'
+        parameters['Save'] = saveToFile
+
+        stdData = CommentedMap()
+
+        stdData['Path'] = self.standardDataPath
+
+        parameters['Standard Data'] = stdData
+
+        datRedSettings = CommentedMap()
+
+        datRedSettings['Detector efficiency correction']             =  str(self.detEffi)
+        datRedSettings['Sum Vandium over detector position']         = str(self.sumVan)
+        datRedSettings['Substract instrument background for sample'] = str(self.subInst)
+        if self.subInst:
+            datRedSettings['Substract factor']                       = self.subFac
+        datRedSettings['Flipping ratio correction']                  = str(self.flippRatio)
+        if self.flippRatio:
+            datRedSettings['Flipping ratio factor']                  = self.flippFac
+        datRedSettings['Multiple SF scattering probability']         = self.multiSF
+        if self.normalise == self.NORM_MONITOR:
+            norm = 'monitor'
+        else:
+            norm = 'time'
+        datRedSettings['Normalization']                              = norm
+        datRedSettings['Neutron wavelength']                         = self.neutronWaveLen
+        datRedSettings['Keep intermediat workspaces']                = str(self.intermadiate)
+
+        parameters['Data reduction settings'] = datRedSettings
+
+        type = CommentedMap()
+
+        if self.out == self.OUT_POLY_AMOR:
+            type['Type'] = 'Polycrystal/Amorphous'
             outAx = ''
             if self.outAxisQ:
                 outAx += 'q, '
@@ -305,12 +351,18 @@ class DNSScriptElement(BaseScriptElement):
             if self.outAxis2Theta:
                 outAx += '2Theta'
 
-            output['Output Axis'] = outAx
+            type['Abscissa'] = outAx
+            if self.seperation == self.SEP_XYZ:
+                type['Seperation'] = 'XYZ'
+            elif self.seperation == self.SEP_COH:
+                type['Seperation'] = 'Coherent/Incoherent'
+            else:
+                type['Seperation'] = 'No'
 
         if self.out == self.OUT_SINGLE_CRYST:
-            output['Output settings'] = 'Single Crystal'
+            type['Type'] = 'Single Crystal'
 
-            output['Omega offset'] = self.omegaOffset
+            type['Omega offset'] = self.omegaOffset
 
             lattice = {}
             lattice['a'] = self.latticeA
@@ -320,7 +372,7 @@ class DNSScriptElement(BaseScriptElement):
             lattice['beta'] = self.latticeBeta
             lattice['gamma'] = self.latticeGamma
 
-            output['Lattice parameters'] = lattice
+            type['Lattice parameters'] = lattice
 
             scatter = {}
             u = []
@@ -334,41 +386,18 @@ class DNSScriptElement(BaseScriptElement):
             scatter['u'] = u
             scatter['v'] = v
 
-            output['Scattering Plane'] = scatter
+            type['Scattering Plane'] = scatter
 
-        parameters['Output'] = output
+        parameters['Sample'] = type
 
-        datRedSettings = CommentedMap()
 
-        datRedSettings['Detector efficiency correction'] =  str(self.detEffi)
-        datRedSettings['Sum Vandium'] = str(self.sumVan)
-        datRedSettings['Substract instrument background'] = str(self.subInst)
-        datRedSettings['Flipping ratio correction'] = str(self.flippRatio)
-        datRedSettings['Multiple SF scattering probability'] = self.multiSF
-        datRedSettings['Keep intermediat workspaces'] = str(self.intermadiate)
-
-        parameters['Data reduction settings'] = datRedSettings
-
-        stdData = CommentedMap()
-
-        stdData['Path'] = self.standardDataPath
-        #stdData['Vanadium Suffix'] = self.VanSuffix
-        #stdData['NiCr Suffix'] = self.NiCrSuffix
-        #stdData['Background Suffix'] = self.backSuffix
-
-        parameters['Standard Data'] = stdData
-
-        sampleData = CommentedMap()
-
-        sampleData['Data path'] = self.sampleDataPath
-        sampleData['File prefix'] = self.filePrefix
-        sampleData['File suffix'] = self.fileSuffix
-        sampleData['Table'] = self.dataRuns
-
-        parameters['Sample Data'] = sampleData
 
 
         print parameters
+
+        (minA,maxA) =  self.maskAngles[0]
+        print minA
+
         script = ['']
 
         def l(line = ''):

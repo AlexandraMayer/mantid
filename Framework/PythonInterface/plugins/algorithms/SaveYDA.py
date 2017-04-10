@@ -7,6 +7,7 @@ from ruamel.yaml.comments import CommentedMap
 
 
 import yaml
+from yaml import CDumper as Dumper
 import math
 
 class SaveYDAPy(PythonAlgorithm):
@@ -66,7 +67,7 @@ class SaveYDAPy(PythonAlgorithm):
         ax = ws.getAxis(1)
         nHist = ws.getNumberHistograms()
         
-        metadata = dict()
+        metadata = CommentedMap()
        
         metadata["format"] = "yaml/frida 2.0"
         metadata["type"] = "gerneric tabular data"
@@ -164,7 +165,7 @@ class SaveYDAPy(PythonAlgorithm):
             #ys = ws.dataY(i)
             ys = ws.dataY(0)
             test = ax.extractValues()
-            #self.log().debug(str(ws.readX(0)[0]))
+            #bin?M  self.log().debug(str(ws.readX(0)[0]))
             #self.log().debug(str(ys[0]))
             #self.log().debug(str(test[0]))
             
@@ -183,7 +184,7 @@ class SaveYDAPy(PythonAlgorithm):
            # self.log().debug(str(xcenters[0]))
             
             
-            slicethis = CommentedMap()
+            slicethis = dict()
             
             val = dict()
             slicethis["j"] =  i
@@ -205,9 +206,9 @@ class SaveYDAPy(PythonAlgorithm):
         data["Slices"] = slices
         
         with open(filename,'w') as outfile:
-            #yaml.dump(data,outfile,default_flow_style=False)
+            yaml.dump(data,outfile,Dumper=Dumper, default_flow_style=False)
         
-            ruamel.yaml.round_trip_dump(data,outfile)   
+            #ruamel.yaml.round_trip_dump(data,outfile)   
   
         
         
