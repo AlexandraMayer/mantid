@@ -245,6 +245,22 @@ class DNSScriptElement(BaseScriptElement):
             self.scatterV2    = get_flt('scattering_Plane_v_2',     self.DEF_ScatterV2)
             self.scatterV3    = get_flt('scattering_Plane_v_3',     self.DEF_ScatterV3)
 
+
+    def _searchFile(self, path, name):
+        files = os.listdir(path)
+        print 'in ', path
+        for file in files:
+            if os.path.isdir(os.path.join(path, file)):
+                found = self._searchFile(os.path.join(path, file),name)
+                if found:
+                    return True
+            if file.__contains__(name):
+                print 'found'
+                return True
+            #else:
+                #print 'not a ', name, ' file'
+        return False
+
     def to_script(self):
 
         def error(message):
@@ -261,6 +277,26 @@ class DNSScriptElement(BaseScriptElement):
 
         if not self.dataRuns:
             error('missing data runs')
+        else:
+            (runNums, outWs, comment) = self.dataRuns[0]
+            runs = runNums.split(',')
+            for run in runs:
+                if run.__contains__(':'):
+                    first = int(run.split(':')[0])
+                    second = int(run.split(':')[1])
+                    for i in range(first,second+1):
+                        file = "{}{}{}.d_dat".format(self.filePrefix, i, self.fileSuffix)
+                        print file
+                        if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
+                            error('file '+ file + ' not found')
+                        #print i
+                else:
+                    #print int(run)
+                    file = "{}{}{}.d_dat".format(self.filePrefix, run, self.fileSuffix)
+                    print file
+                    if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
+                           error('file '+ file + ' not found')
+
 
         if not self.maskAngles:
             error('missing mask detectors angles')
@@ -276,11 +312,25 @@ class DNSScriptElement(BaseScriptElement):
                 error('output directory not found')
             elif not os.access(self.outDir, os.W_OK):
                 error('cant write in directory ' + str(self.outDir))
+
             if not self.outPrefix:
                 error('missing output file prefix')
 
         if not os.path.lexists(self.standardDataPath):
             error('standard data path not found')
+        else:
+            if self.detEffi:
+                found = self._searchFile(self.standardDataPath, 'vana')
+                if not found:
+                    error('no vana file')
+            if self.subInst:
+                found = self._searchFile(self.standardDataPath, 'leer')
+                if not found:
+                    error('no leer file')
+            if self.flippRatio:
+                found = self._searchFile(self.standardDataPath, 'nicr')
+                if not found:
+                    error('no nicr file')
 
         if self.out == self.OUT_POLY_AMOR and not self.outAxisQ and not self.outAxisD and not self.outAxis2Theta:
             error('no output axis selected')

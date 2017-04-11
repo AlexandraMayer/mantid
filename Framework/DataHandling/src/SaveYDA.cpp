@@ -149,7 +149,7 @@ void SaveYDA::exec() {
 
     Axis *X = ws->getAxis(0);
 
-    if(X != nullptr)
+    //if(X != nullptr)
     Coordinate xc;
     xc.designation = "x";
 
