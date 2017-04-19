@@ -4,6 +4,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from ruamel.yaml.comments import CommentedMap
 import os
+import re
 
 from reduction_gui.reduction.scripter import BaseScriptElement, BaseReductionScripter
 
@@ -30,7 +31,7 @@ class DNSScriptElement(BaseScriptElement):
     DEF_FlippFac     = 1.0
     DEF_MultiSF      = 0.0
     DEF_Normalise    = NORM_TIME
-    DEF_NeutWaveLen = 0.0
+    DEF_NeutWaveLen  = 0.0
     DEF_Intermadiate = False
 
     DEF_Output = OUT_POLY_AMOR
@@ -54,7 +55,7 @@ class DNSScriptElement(BaseScriptElement):
     DEF_ScatterV2    = 0.0
     DEF_ScatterV3    = 0.0
 
-    XML_TAG = 'DNSReducton'
+    XML_TAG = 'DNSReduction'
 
     def reset(self):
 
@@ -246,22 +247,61 @@ class DNSScriptElement(BaseScriptElement):
             self.scatterV3    = get_flt('scattering_Plane_v_3',     self.DEF_ScatterV3)
 
 
-    def _searchFile(self, path, name):
-        files = os.listdir(path)
-        print 'in ', path
-        for file in files:
-            if os.path.isdir(os.path.join(path, file)):
-                found = self._searchFile(os.path.join(path, file),name)
-                if found:
-                    return True
-            if file.__contains__(name):
-                print 'found'
-                return True
-            #else:
-                #print 'not a ', name, ' file'
-        return False
 
     def to_script(self):
+
+        def _searchFile(path, name):
+            files = os.listdir(path)
+            for file in files:
+                if file.__contains__(name):
+                    print file
+                    print 'found'
+                    return True
+            return False
+
+        def _searchFiles(path, prefix, suffix, dataRun):
+            fs = []
+            for runs in dataRun:
+                (runNums, outWs, comment) = runs
+                numbers = runNums.split(',')
+                for number in numbers:
+                    if number.__contains__(':'):
+                        (first, last) = number.split(':')
+                        first = int(first)
+                        last = int(last)
+                        for i in range(first, last + 1):
+                            files = [f for f in os.listdir(path) if
+                                     re.match(r"{}0*{}{}.d_dat".format(prefix, int(i), suffix), f)]
+                            print files
+                            fs.append(files)
+                            if not files:
+                                error('file with prefix ' + prefix + ', run number '
+                                      + str(i) + ' and suffix ' + suffix + ' not found')
+                            else:
+                                print 'found'
+                            #file = "{}{}{}.d_dat".format(prefix, i , suffix)
+                            #print file
+                            #if not os.path.lexists(os.path.join(path, file)):
+                            #    error('file ' + file + ' not found')
+                            #else:
+                            #    print 'found'
+                    else:
+                        files = [f for f in os.listdir(path) if
+                                 re.match(r"{}0*{}{}.d_dat".format(prefix, int(number), suffix), f)]
+                        print files
+                        fs.append(files)
+                        if not files:
+                            error('file with prefix ' + prefix + ', run number '
+                                  + str(number) + ' and suffix ' + suffix + ' not found')
+                        else:
+                            print 'found'
+                        #file = "{}{}{}.d_dat".format(prefix, number, suffix)
+                        #print file
+                        #if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
+                        #    error('file '+ file + ' not found')
+                        #else:
+                        #    print 'found'
+            return fs
 
         def error(message):
             raise RuntimeError('DNS reduction error: ' + message)
@@ -278,28 +318,10 @@ class DNSScriptElement(BaseScriptElement):
         if not self.dataRuns:
             error('missing data runs')
         else:
-            (runNums, outWs, comment) = self.dataRuns[0]
-            runs = runNums.split(',')
-            for run in runs:
-                if run.__contains__(':'):
-                    first = int(run.split(':')[0])
-                    second = int(run.split(':')[1])
-                    for i in range(first,second+1):
-                        file = "{}{}{}.d_dat".format(self.filePrefix, i, self.fileSuffix)
-                        print file
-                        if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
-                            error('file '+ file + ' not found')
-                        #print i
-                else:
-                    #print int(run)
-                    file = "{}{}{}.d_dat".format(self.filePrefix, run, self.fileSuffix)
-                    print file
-                    if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
-                           error('file '+ file + ' not found')
+            files = _searchFiles(self.sampleDataPath, self.filePrefix, self.fileSuffix, self.dataRuns )
 
-
-        if not self.maskAngles:
-            error('missing mask detectors angles')
+        #if not self.maskAngles:
+        #    error('missing mask detectors angles')
 
         for i in range(len(self.maskAngles)):
             (minA, maxA) = self.maskAngles[i]
@@ -320,17 +342,20 @@ class DNSScriptElement(BaseScriptElement):
             error('standard data path not found')
         else:
             if self.detEffi:
-                found = self._searchFile(self.standardDataPath, 'vana')
+                found = _searchFile(self.standardDataPath, 'vana')
                 if not found:
-                    error('no vana file')
+                    error('no file for detector efficiency correction in '
+                          + str(self.standardDataPath) + ' found')
             if self.subInst:
-                found = self._searchFile(self.standardDataPath, 'leer')
+                found = _searchFile(self.standardDataPath, 'leer')
                 if not found:
-                    error('no leer file')
+                    error('no file to substract of instrument background for sample in '
+                          + str(self.standardDataPath) + ' found')
             if self.flippRatio:
-                found = self._searchFile(self.standardDataPath, 'nicr')
+                found = _searchFile(self.standardDataPath, 'nicr')
                 if not found:
-                    error('no nicr file')
+                    error('no file for flipping ratio correction in '
+                          + str(self.standardDataPath) + ' found')
 
         if self.out == self.OUT_POLY_AMOR and not self.outAxisQ and not self.outAxisD and not self.outAxis2Theta:
             error('no output axis selected')
@@ -342,12 +367,30 @@ class DNSScriptElement(BaseScriptElement):
         sampleData['Data path']   = self.sampleDataPath
         sampleData['File prefix'] = self.filePrefix
         sampleData['File suffix'] = self.fileSuffix
-        sampleData['Data Table']  = self.dataRuns
+        runs = CommentedMap()
+        for i in range(len(self.dataRuns)):
+            run = CommentedMap()
+            (runNumber, outWs, comment) = self.dataRuns[i]
+            run["Run numbers"] = runNumber
+            run["Output Workspace"] = outWs
+            run["Comment"] = comment
+            string = "Runs in row: " + str(i)
+            runs[string] = run
+
+        if self.dataRuns:
+            runs['files'] = files
+        sampleData['Data Table']  = runs
 
         parameters['Sample Data'] = sampleData
 
         maskDet = CommentedMap()
-        maskDet['Mask Detectors Table'] = self.maskAngles
+        for i in range(len(self.maskAngles)):
+            mask = CommentedMap()
+            (minA, maxA) = self.maskAngles[i]
+            mask['Min Angle'] = minA
+            mask['Max Angle'] = maxA
+            string = "Angles row: " + str(i)
+            maskDet[string] = mask
 
         parameters['Mask Detectors'] = maskDet
 
@@ -445,19 +488,10 @@ class DNSScriptElement(BaseScriptElement):
 
         print parameters
 
-        (minA,maxA) =  self.maskAngles[0]
-        print minA
-
         script = ['']
 
         def l(line = ''):
             script[0] += line + '\n'
-
-        #def get_log(workspace, tag):
-        #    return "{}.getRun().getLogData('{}').value".format(workspace, tag)
-
-        #def get_time(workspace):
-        #    return get_log(workspace, 'duration')
 
         l("import numpy as np")
         l()
