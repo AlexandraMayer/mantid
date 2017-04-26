@@ -358,7 +358,9 @@ class DNSSetupWidget(BaseWidget):
                 lable.setToolTip(tip)
             return lable
 
-        gbSampleData   = QGroupBox('Sample data')
+        gbSampleData   = QGroupBox(self.tr('Sample data'))
+        print gbSampleData.isFlat()
+        gbSampleData.setFlat(True)
         gbRuns         = QGroupBox('')
         gbMaskDet      = QGroupBox('Mask Detectors')
         gbOut          = QGroupBox('')
@@ -368,6 +370,14 @@ class DNSSetupWidget(BaseWidget):
         gbSingleCryst  = QGroupBox('')
         gbOutput       = QGroupBox('')
 
+        horizontalLine = QFrame()
+        horizontalLine.setFrameStyle(QFrame.HLine)
+        #horizontalLine.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        horizontalLine2 = QFrame()
+        horizontalLine2.setFrameStyle(QFrame.HLine)
+        #horizontalLine2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         box = QHBoxLayout()
         self._layout.addLayout(box)
 
@@ -375,6 +385,7 @@ class DNSSetupWidget(BaseWidget):
         box.addLayout(vbox((gbStdData, gbOutput)))
 
         grid = QGridLayout()
+        grid.addWidget(horizontalLine2,        1, 0, 0, 4)
         grid.addWidget(QLabel('Data path'),    0, 0)
         grid.addWidget(self.sampleDataPath,    0, 1)
         grid.addWidget(self.btnSampleDataPath, 0, 2)
@@ -382,10 +393,14 @@ class DNSSetupWidget(BaseWidget):
         grid.addWidget(self.sampleFilePre,     1, 1)
         grid.addWidget(QLabel('suffix'),       1, 2)
         grid.addWidget(self.sampleFileSuff,    1, 3)
-
         gbSampleData.setLayout(grid)
 
-        gbRuns.setLayout(hbox((self.runsView,)))
+
+        grid = QGridLayout()
+        grid.addWidget(self.runsView,  0, 0)
+        grid.addWidget(horizontalLine, 1, 0, 1, 0)
+        #gbRuns.setLayout(hbox((self.runsView,)))
+        gbRuns.setLayout(grid)
 
         gbMaskDet.setLayout(hbox((self.maskAngleView,)))
 

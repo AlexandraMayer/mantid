@@ -78,11 +78,11 @@ void SaveYDA::exec() {
     }
 
     const size_t nHist = ws->getNumberHistograms();
+    YAML::Emitter em;
 
     //initializing metadata
     metadata["format"] = "yaml/frida 2.0";
     metadata["type"] = "generic tabular data";
-    YAML::Emitter em;
 
     auto ld = ws->run().getLogData();
 

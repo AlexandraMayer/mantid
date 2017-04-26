@@ -254,8 +254,6 @@ class DNSScriptElement(BaseScriptElement):
             files = os.listdir(path)
             for file in files:
                 if file.__contains__(name):
-                    print file
-                    print 'found'
                     return True
             return False
 
@@ -272,39 +270,23 @@ class DNSScriptElement(BaseScriptElement):
                         for i in range(first, last + 1):
                             files = [f for f in os.listdir(path) if
                                      re.match(r"{}0*{}{}.d_dat".format(prefix, int(i), suffix), f)]
-                            print files
                             fs.append(files)
                             if not files:
                                 error('file with prefix ' + prefix + ', run number '
                                       + str(i) + ' and suffix ' + suffix + ' not found')
-                            else:
-                                print 'found'
-                            #file = "{}{}{}.d_dat".format(prefix, i , suffix)
-                            #print file
-                            #if not os.path.lexists(os.path.join(path, file)):
-                            #    error('file ' + file + ' not found')
-                            #else:
-                            #    print 'found'
                     else:
                         files = [f for f in os.listdir(path) if
                                  re.match(r"{}0*{}{}.d_dat".format(prefix, int(number), suffix), f)]
-                        print files
                         fs.append(files)
                         if not files:
                             error('file with prefix ' + prefix + ', run number '
                                   + str(number) + ' and suffix ' + suffix + ' not found')
-                        else:
-                            print 'found'
-                        #file = "{}{}{}.d_dat".format(prefix, number, suffix)
-                        #print file
-                        #if not os.path.lexists(os.path.join(self.sampleDataPath, file)):
-                        #    error('file '+ file + ' not found')
-                        #else:
-                        #    print 'found'
             return fs
 
         def error(message):
             raise RuntimeError('DNS reduction error: ' + message)
+
+        files = None
 
         if not os.path.lexists(self.sampleDataPath):
             error('sample data path not found')
@@ -319,9 +301,6 @@ class DNSScriptElement(BaseScriptElement):
             error('missing data runs')
         else:
             files = _searchFiles(self.sampleDataPath, self.filePrefix, self.fileSuffix, self.dataRuns )
-
-        #if not self.maskAngles:
-        #    error('missing mask detectors angles')
 
         for i in range(len(self.maskAngles)):
             (minA, maxA) = self.maskAngles[i]
@@ -358,7 +337,7 @@ class DNSScriptElement(BaseScriptElement):
                           + str(self.standardDataPath) + ' found')
 
         if self.out == self.OUT_POLY_AMOR and not self.outAxisQ and not self.outAxisD and not self.outAxis2Theta:
-            error('no output axis selected')
+            error('no abscissa selected')
 
         parameters = CommentedMap()
 
@@ -377,7 +356,7 @@ class DNSScriptElement(BaseScriptElement):
             string = "Runs in row: " + str(i)
             runs[string] = run
 
-        if self.dataRuns:
+        if files:
             runs['files'] = files
         sampleData['Data Table']  = runs
 
