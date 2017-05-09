@@ -1,14 +1,23 @@
 from mantid.api import *
 from mantid.kernel import*
-
+from collections import OrderedDict
 import ruamel.yaml
 
-from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 
 import yaml
 from yaml import CDumper as Dumper
+from yaml import CSafeDumper as DumperTest
 import math
+
+def represent_ordered_dict(self, data):
+    data_type = type(data)
+    tag = 'tag:yaml.org,2002:python/object/apply:%s.%s' \
+    % (data_type.__module__, data_type.__name__)
+    items = [[key, value] for key, value in data.items()]
+    return self.represent_sequence(tag, [items])
+
 
 class SaveYDAPy(PythonAlgorithm):
     
@@ -68,8 +77,9 @@ class SaveYDAPy(PythonAlgorithm):
         nHist = ws.getNumberHistograms()
         
         metadata = CommentedMap()
+        #metadata.items().reverse()
        
-        metadata["format"] = "yaml/frida 2.0"
+        metadata["format"] =  "yaml/frida 2.0"
         metadata["type"] = "gerneric tabular data"
         
         
@@ -86,17 +96,18 @@ class SaveYDAPy(PythonAlgorithm):
         
         
         rpar = []
+
+        temperature = float(run.getLogData("temperature").value)
+        eimeV = float(run.getLogData("Ei").value)
         
-        temperature = run.getLogData("temperature").value
-        eimeV = run.getLogData("Ei").value
-        
-        temp = dict()
+        temp = CommentedMap()
         temp["name"] = "T"
         temp["unit"] = "K"
         temp["val"] =  temperature
         temp["stdv"] = 0
+        print temp
         
-        ei = dict()
+        ei = CommentedMap()
         ei["name"] = "Ei"
         ei["unit"] = "meV"
         ei["val"] = eimeV
@@ -105,26 +116,28 @@ class SaveYDAPy(PythonAlgorithm):
         rpar.append(temp)
         rpar.append(ei)
         
-        coord = []
+        coord = CommentedMap()
         
         xc = dict()
-        x = dict()
+        x = CommentedMap()
         
         x["name"] = "w"
         x["unit"] = "meV"
         
-        xc["x"] =  x
+        coord["x"] =  x
+        coord['x'].fa.set_flow_style()
      
         yc = dict()
-        y = dict()
+        y = CommentedMap()
         
         y["name"] = "S(q,w)"
         y["unit"] = "meV-1"
        
-        yc["y"] = y
+        coord["y"] = y
+        coord["y"].fa.set_flow_style()
         
         zc = dict()
-        z = dict()
+        z = CommentedMap()
         
         if(ax.isSpectra):
             zname = "2th"
@@ -136,11 +149,12 @@ class SaveYDAPy(PythonAlgorithm):
         z["name"] =  zname
         z["unit"] = zunit
         
-        zc["z"] = z
+        coord["z"] = z
+        coord["z"].fa.set_flow_style()
         
-        coord.append(xc)
-        coord.append(yc)
-        coord.append(zc)
+        #coord.append(xc)
+        #coord.append(yc)
+        #coord.append(zc)
         
         slices = []
         
@@ -184,32 +198,66 @@ class SaveYDAPy(PythonAlgorithm):
            # self.log().debug(str(xcenters[0]))
             
             
-            slicethis = dict()
+            slicethis = CommentedMap()
             
-            val = dict()
+            val = CommentedMap()
             slicethis["j"] =  i
             val["val"] = bin[i]
-            slicethis["z"] =  dict( val = bin[i])
-            slicethis ["x"] = str(xcenters)
-            slicethis["y"] =  str(yv)
+            liste = [val]
+            #slicethis["z"] =  dict( val = bin[i])
+            slicethis['z'] = CommentedSeq(liste)
+            slicethis["z"].fa.set_flow_style()
+            xx = [float(i) for i in xcenters]
+            print xx
+            slicethis['x'] = CommentedSeq(xx)
+            slicethis['x'].fa.set_flow_style()
+            #slicethis ["x"] = str(xcenters)
+            yy = [float(i) for i in yv]
+            slicethis['y'] = CommentedSeq(yy)
+            slicethis['y'].fa.set_flow_style()
+
+            #slicethis["y"] =  str(yv)
             
             slices.append(slicethis)
 
         
+
         data = CommentedMap()
-        
+
         data["Meta"] = metadata
         data["History"]  = hist
         data["Coord"] = coord
         data["RPar"] = rpar
-        
+
         data["Slices"] = slices
+
+        data2 = OrderedDict([])
+        data2["Meta"] = metadata
+        data2["History"]  = hist
+        data2["Coord"] = coord
+        data2["RPar"] = rpar
+
+        data2["Slices"] = slices
+
+        print data
         
         with open(filename,'w') as outfile:
-            yaml.dump(data,outfile,Dumper=Dumper, default_flow_style=False)
-        
-            #ruamel.yaml.round_trip_dump(data,outfile)   
-  
+
+            #yaml.dump(data2, outfile, Dumper=Dumper, default_flow_style=False)
+            #outfile.write('\n-----------------------\n')
+            #yaml.dump(data, outfile, Dumper=Dumper, canonical=False)
+            #ruamel.yaml.round_trip_dump(data, outfile)
+            #outfile.write('\n-----------------------\n')
+            ruamel.yaml.round_trip_dump(data, outfile, block_seq_indent=2, indent=4)
+            #outfile.write('\n-----------------------\n')
+            #ruamel.yaml.round_trip_dump(data, outfile, block_seq_indent=2, explicit_start=True)
+
+            outfile.close()
+
+        #f = open(filename, 'w')
+        #
+
+
         
         
 AlgorithmFactory.subscribe(SaveYDAPy) 
