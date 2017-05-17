@@ -56,7 +56,6 @@ class LoadYaml(PythonAlgorithm):
             self.log().warning("no file open")
 
         lines = file.readlines()[0:2]
-        print(str(lines))
 
         file.close()
 
@@ -440,11 +439,9 @@ class LoadYaml(PythonAlgorithm):
                                 tof_channels = len(detector['counts'][0])
 
                             dataX = np.linspace(x0, x0 + tof_channels*tof_channel_duration, tof_channels+1)
-                            print(str(dataX))
 
 
                             dataY = np.array([detector['counts'][i] for i in detector['counts']], np.float)
-                            print(str(dataY))
                             dataE = np.array(e, np.float)
 
                             log_names  = [item[0] for item in sample_logs]
